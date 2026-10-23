@@ -1,10 +1,3 @@
-"""
-main.py: druhý projekt do Engeto Online Python Akademie
-
-author: Jméno Příjmení
-email: zbynek.illy@gmail.com
-"""
-
 import random
 import time
 
