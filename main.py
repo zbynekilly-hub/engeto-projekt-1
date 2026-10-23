@@ -1,106 +1,137 @@
-TEXTS = [
-    '''Situated about 10 miles west of Kemmerer,
-    Fossil Butte is a ruggedly impressive
-    topographic feature that rises sharply
-    some 1000 feet above Twin Creek Valley
-    to an elevation of more than 7500 feet
-    above sea level. The butte is located just
-    north of US 30 and the Union Pacific Railroad,
-    which traverse the valley.''',
-    '''At the base of Fossil Butte are the bright
-    red, purple, yellow and gray beds of the Wasatch
-    Formation. Eroded portions of these horizontal
-    beds slope gradually upward from the valley floor
-    and steepen abruptly. Overlying them and extending
-    to the top of the butte are the much steeper
-    buff-to-white beds of the Green River Formation,
-    which are about 300 feet thick.''',
-    '''The monument contains 8198 acres and protects
-    a portion of the largest deposit of freshwater fish
-    fossils in the world. The richest fossil fish deposits
-    are found in multiple limestone layers, which lie some
-    100 feet below the top of the butte. The fossils
-    represent several varieties of perch, as well as
-    other freshwater genera and herring similar to those
-    in modern oceans. Other fish such as paddlefish,
-    garpike and stingray are also present.'''
-]
+"""
+main.py: druhý projekt do Engeto Online Python Akademie
 
-USERS = {
-    "bob": "123",
-    "ann": "pass123",
-    "mike": "password123",
-    "liz": "pass123"
-}
+author: Jméno Příjmení
+email: zbynek.illy@gmail.com
+"""
 
-line = "-" * 40
+import random
+import time
 
-username = input("username:")
-password = input("password:")
+NUMBER_LENGTH = 4
+SEPARATOR = "-" * 47
 
-if username in USERS and USERS[username] == password:
-    print(line)
-    print(f"Welcome to the app, {username}")
-    print(f"We have {len(TEXTS)} texts to be analyzed.")
-    print(line)
-else:
-    print("unregistered user, terminating the program..")
-    exit()
 
-selection = input(
-    f"Enter a number btw. 1 and {len(TEXTS)} to select: "
-)
+def print_intro() -> None:
+    """Vypíše úvodní pozdrav a pravidla hry."""
+    print("Hi there!")
+    print(SEPARATOR)
+    print(f"I've generated a random {NUMBER_LENGTH} digit number for you.")
+    print("Let's play a bulls and cows game.")
+    print(SEPARATOR)
+    print("Enter a number:")
+    print(SEPARATOR)
 
-if not selection.isnumeric():
-    print("invalid input, terminating the program..")
-    exit()
 
-selection = int(selection)
+def generate_secret_number(length: int = NUMBER_LENGTH) -> str:
+    """Vrátí náhodné číslo s unikátními číslicemi, které nezačíná nulou."""
+    first_digit = random.choice("123456789")
+    # zbývající číslice vybíráme z těch, které ještě nebyly použity
+    remaining = [digit for digit in "0123456789" if digit != first_digit]
+    return first_digit + "".join(random.sample(remaining, length - 1))
 
-if selection < 1 or selection > len(TEXTS):
-    print("invalid text number, terminating the program..")
-    exit()
 
-print(line)
+def validate_guess(guess: str, length: int = NUMBER_LENGTH) -> str | None:
+    """
+    Ověří tip hráče.
 
-words = TEXTS[selection - 1].split()
+    Vrátí text chyby, nebo None, pokud je tip v pořádku.
+    """
+    if not guess.isdigit():
+        return "Your guess must contain only digits."
+    if len(guess) != length:
+        return f"Your guess must have exactly {length} digits."
+    if guess[0] == "0":
+        return "Your guess must not start with zero."
+    if len(set(guess)) != length:
+        return "Your guess must not contain duplicate digits."
+    return None
 
-word_count = len(words)
-titlecase_count = 0
-uppercase_count = 0
-lowercase_count = 0
-numeric_count = 0
-numeric_sum = 0
-length_counts = {}
 
-for word in words:
-    cleaned_word = word.strip(",.:;")
+def get_valid_guess() -> str:
+    """Opakovaně žádá hráče o tip, dokud nezadá platné číslo."""
+    while True:
+        guess = input(">>> ").strip()
+        error = validate_guess(guess)
+        if error is None:
+            return guess
+        print(error)
+        print(SEPARATOR)
 
-    if cleaned_word.isupper() and cleaned_word.isalpha():
-        uppercase_count += 1
-    elif cleaned_word.istitle():
-        titlecase_count += 1
-    elif cleaned_word.islower():
-        lowercase_count += 1
-    elif cleaned_word.isnumeric():
-        numeric_count += 1
-        numeric_sum += int(cleaned_word)
 
-    length = len(cleaned_word)
-    length_counts[length] = length_counts.get(length, 0) + 1
+def evaluate_guess(secret: str, guess: str) -> tuple[int, int]:
+    """Vrátí počet bulls a cows pro daný tip."""
+    bulls = sum(1 for s, g in zip(secret, guess) if s == g)
+    # společné číslice bez ohledu na pozici, bez těch, které už jsou bulls
+    cows = len(set(secret) & set(guess)) - bulls
+    return bulls, cows
 
-print(f"There are {word_count} words in the selected text.")
-print(f"There are {titlecase_count} titlecase words.")
-print(f"There are {uppercase_count} uppercase words.")
-print(f"There are {lowercase_count} lowercase words.")
-print(f"There are {numeric_count} numeric strings.")
-print(f"The sum of all the numbers {numeric_sum}")
-print(line)
 
-print(f"{'LEN':>3}|{'OCCURRENCES':^17}|{'NR.':<3}")
-print(line)
+def pluralize(count: int, word: str) -> str:
+    """Vrátí počet se slovem v jednotném, nebo množném čísle."""
+    return f"{count} {word}" if count == 1 else f"{count} {word}s"
 
-for length in sorted(length_counts):
-    count = length_counts[length]
-    stars = "*" * count
-    print(f"{length:>3}|{stars:<17}|{count:<3}")
+
+def format_guesses(count: int) -> str:
+    """Vrátí počet pokusů se správným tvarem slova guess/guesses."""
+    return f"{count} guess" if count == 1 else f"{count} guesses"
+
+
+def format_result(bulls: int, cows: int) -> str:
+    """Vrátí naformátovaný výsledek tipu, např. '1 bull, 2 cows'."""
+    return f"{pluralize(bulls, 'bull')}, {pluralize(cows, 'cow')}"
+
+
+def print_congratulations(attempts: int, elapsed: float) -> None:
+    """Vypíše gratulaci s počtem pokusů a dobou hry."""
+    print("Correct, you've guessed the right number")
+    print(f"in {format_guesses(attempts)}!")
+    print(f"It took you {elapsed:.1f} seconds.")
+    print(SEPARATOR)
+    print("That's amazing!")
+
+
+def play_game() -> int:
+    """Odehraje jednu hru a vrátí počet pokusů."""
+    secret = generate_secret_number()
+    attempts = 0
+    start_time = time.time()
+
+    while True:
+        guess = get_valid_guess()
+        attempts += 1
+        bulls, cows = evaluate_guess(secret, guess)
+        if bulls == NUMBER_LENGTH:
+            print_congratulations(attempts, time.time() - start_time)
+            return attempts
+        print(format_result(bulls, cows))
+        print(SEPARATOR)
+
+
+def ask_play_again() -> bool:
+    """Zeptá se hráče, zda chce hrát znovu."""
+    answer = input("Do you want to play again? (y/n): ").strip().lower()
+    return answer == "y"
+
+
+def print_statistics(results: list[int]) -> None:
+    """Vypíše statistiky počtu pokusů ze všech odehraných her."""
+    print(SEPARATOR)
+    print(f"Games played: {len(results)}")
+    print(f"Best game: {format_guesses(min(results))}")
+    print(f"Average: {sum(results) / len(results):.1f} guesses")
+
+
+def main() -> None:
+    """Hlavní funkce programu, řídí opakování her a statistiky."""
+    results = []
+    while True:
+        print_intro()
+        results.append(play_game())
+        if not ask_play_again():
+            break
+    print_statistics(results)
+
+
+if __name__ == "__main__":
+    main()
